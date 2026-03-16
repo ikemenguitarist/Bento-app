@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>運営ハブ</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 980px;
+            margin: 32px auto;
+            padding: 0 16px 40px;
+            color: #222;
+            line-height: 1.6;
+        }
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+        }
+        .section-card {
+            border: 1px solid #dadada;
+            border-radius: 12px;
+            padding: 18px;
+            background: #fff;
+        }
+        .section-card h2 {
+            margin-top: 0;
+        }
+        ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+        a {
+            color: #1d4ed8;
+        }
+        .note {
+            margin-bottom: 24px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>運営ハブ</h1>
+    <p class="note">日次運用、配布、マスタ更新の入口をまとめています。迷ったらここから進めれば大丈夫です。</p>
+
+    <div class="section-grid">
+        {% for section in sections %}
+        <div class="section-card">
+            <h2>{{ section.title }}</h2>
+            <p>{{ section.description }}</p>
+            <ul>
+                {% for link in section.links %}
+                <li><a href="{{ link.url }}">{{ link.label }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

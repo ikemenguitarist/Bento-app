@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>{{ company.name }} / {{ department.name }} 注文フォーム</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 760px;
+            margin: 32px auto;
+            padding: 0 16px;
+            line-height: 1.6;
+            color: #222;
+        }
+        .panel {
+            border: 1px solid #d9d9d9;
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 20px;
+            background: #fff;
+        }
+        .banner {
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+        .banner.waiting {
+            background: #fff8e1;
+            border-color: #f0c36d;
+        }
+        .banner.danger {
+            background: #ffebee;
+            border-color: #e57373;
+        }
+        .menu-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 16px;
+            align-items: center;
+            border: 1px solid #e3e3e3;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+        .menu-name {
+            font-weight: bold;
+        }
+        .price {
+            color: #666;
+        }
+        input[type="number"] {
+            width: 88px;
+            padding: 8px;
+        }
+        .errors, .messages {
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: #ffebee;
+            border: 1px solid #e57373;
+        }
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 0;
+            border-radius: 10px;
+            background: #1d6f42;
+            color: #fff;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #9e9e9e;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>注文フォーム</h1>
+    <div class="panel">
+        <p><strong>企業:</strong> {{ company.name }}</p>
+        <p><strong>部署:</strong> {{ department.name }}</p>
+        <p><strong>対象日:</strong> {{ today }}</p>
+        {% if source_label %}
+        <p><strong>初期値:</strong> {{ source_label }}</p>
+        {% endif %}
+    </div>
+
+    <div class="banner {% if deadline.passed %}danger{% else %}waiting{% endif %}">
+        <strong>{{ deadline.text }}</strong>
+    </div>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div>{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if errors %}
+    <div class="errors">
+        {% for error in errors %}
+        <div>{{ error }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {% for row in menu_rows %}
+        <div class="menu-row">
+            <div>
+                <div class="menu-name">{{ row.menu.name }}</div>
+                <div class="price">{{ row.menu.price }}円</div>
+            </div>
+            <label for="menu_{{ row.menu.id }}">数量</label>
+            <input
+                id="menu_{{ row.menu.id }}"
+                name="menu_{{ row.menu.id }}"
+                type="number"
+                min="0"
+                value="{{ row.quantity }}"
+                {% if deadline.passed %}disabled{% endif %}
+            >
+        </div>
+        {% empty %}
+        <div class="panel">現在注文できるメニューがありません。</div>
+        {% endfor %}
+
+        <button type="submit" {% if deadline.passed or not menu_rows %}disabled{% endif %}>注文を送信する</button>
+    </form>
+</body>
+</html>

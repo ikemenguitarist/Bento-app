@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>配送リスト</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 900px;
+            margin: 32px auto;
+            padding: 0 16px 40px;
+            color: #222;
+            line-height: 1.6;
+        }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: end;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .delivery-box {
+            border: 1px solid #dadada;
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
+            background: #fff;
+        }
+        a {
+            color: #1d4ed8;
+        }
+        input[type="date"], button {
+            padding: 8px 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>配送リスト</h1>
+    <p>{{ target_date }}</p>
+
+    <form method="get" class="toolbar">
+        <div>
+            <label for="date">対象日</label><br>
+            <input id="date" type="date" name="date" value="{{ selected_date }}">
+        </div>
+        <div>
+            <button type="submit">表示を切り替える</button>
+        </div>
+    </form>
+
+    <p>
+        <a href="{% url 'orders:dashboard' %}?date={{ selected_date }}">ダッシュボードへ戻る</a>
+        <a href="{% url 'orders:delivery-pdf' %}?date={{ selected_date }}">PDFをダウンロード</a>
+    </p>
+
+    {% for row in deliveries %}
+    <div class="delivery-box">
+        <h2>{{ row.company_name }} / {{ row.department_name }}</h2>
+        <ul>
+            {% for item in row.items %}
+            <li>{{ item.menu_name }}: {{ item.quantity }}食</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% empty %}
+    <p>まだ注文はありません。</p>
+    {% endfor %}
+</body>
+</html>

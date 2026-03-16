@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>企業・部署一覧</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 960px;
+            margin: 32px auto;
+            padding: 0 16px 40px;
+            color: #222;
+            line-height: 1.6;
+        }
+        .company-box {
+            border: 1px solid #dadada;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 18px;
+            background: #fff;
+        }
+        .department-row {
+            border-top: 1px solid #eee;
+            padding: 12px 0;
+        }
+        .department-row:first-of-type {
+            border-top: 0;
+        }
+        .link {
+            word-break: break-all;
+        }
+        a {
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <h1>企業・部署一覧</h1>
+    <p>
+        <a href="{% url 'orders:dashboard' %}">ダッシュボード</a>
+        <a href="{% url 'orders:qr-directory' %}">QR 一覧</a>
+    </p>
+
+    {% for company in company_rows %}
+    <div class="company-box">
+        <h2>{{ company.name }}</h2>
+        {% for department in company.departments %}
+        <div class="department-row">
+            <p><strong>部署:</strong> {{ department.name }}</p>
+            <p class="link"><strong>注文URL:</strong> <a href="{{ department.order_url }}">{{ department.order_url }}</a></p>
+        </div>
+        {% empty %}
+        <p>有効な部署がありません。</p>
+        {% endfor %}
+    </div>
+    {% empty %}
+    <p>有効な企業がありません。</p>
+    {% endfor %}
+</body>
+</html>

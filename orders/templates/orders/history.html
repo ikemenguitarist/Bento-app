@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>注文履歴</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 960px;
+            margin: 32px auto;
+            padding: 0 16px 40px;
+            color: #222;
+            line-height: 1.6;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+        th, td {
+            border: 1px solid #dadada;
+            padding: 12px;
+            vertical-align: top;
+            text-align: left;
+        }
+        th {
+            background: #f6f6f6;
+        }
+        a {
+            color: #1d4ed8;
+        }
+        ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: end;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        input[type="date"], button {
+            padding: 8px 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>注文履歴</h1>
+    <p>最新 {{ limit }} 件を表示しています。</p>
+
+    <form method="get" class="toolbar">
+        <div>
+            <label for="date">対象日</label><br>
+            <input id="date" type="date" name="date" value="{{ selected_date }}">
+        </div>
+        <div>
+            <button type="submit">絞り込む</button>
+        </div>
+        <div>
+            <a href="{% url 'orders:history' %}">日付条件を外す</a>
+        </div>
+    </form>
+
+    <p><a href="{% url 'orders:dashboard' %}{% if selected_date %}?date={{ selected_date }}{% endif %}">ダッシュボードへ戻る</a></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>日付</th>
+                <th>企業</th>
+                <th>部署</th>
+                <th>注文内容</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in history_rows %}
+            <tr>
+                <td>{{ row.order_date }}</td>
+                <td>{{ row.company_name }}</td>
+                <td>{{ row.department_name }}</td>
+                <td>
+                    <ul>
+                        {% for item in row.items %}
+                        <li>{{ item.menu_name }}: {{ item.quantity }}食</li>
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">履歴はまだありません。</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

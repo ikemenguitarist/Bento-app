@@ -1,8 +1,8 @@
-*.pyc
-*~
-/.vscode
-__pycache__
-myvenv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
 db.sqlite3
-/static
-.DS_Store
+delivery_list_*.pdf
+
+venv/

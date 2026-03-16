@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>注文完了</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 640px;
+            margin: 48px auto;
+            padding: 0 16px;
+            line-height: 1.6;
+            color: #222;
+        }
+        .card {
+            border: 1px solid #d9d9d9;
+            border-radius: 12px;
+            padding: 24px;
+            background: #fff;
+        }
+        a {
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>注文を受け付けました</h1>
+        <p>{{ company.name }} / {{ department.name }} の注文を保存しました。</p>
+        <p><a href="{% url 'orders:department-order' company.slug department.slug %}">注文画面に戻る</a></p>
+    </div>
+</body>
+</html>
