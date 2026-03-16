@@ -48,6 +48,7 @@
     <p>
         <a href="{% url 'orders:dashboard' %}">ダッシュボード</a>
         <a href="{% url 'orders:company-directory' %}">企業・部署一覧</a>
+        <a href="{% url 'logout' %}">ログアウト</a>
     </p>
 
     {% for company in company_rows %}

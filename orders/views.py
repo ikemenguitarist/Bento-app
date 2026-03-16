@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import FileResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -95,7 +96,11 @@ class OrderThanksView(View):
         return render(request, self.template_name, context)
 
 
-class DashboardView(View):
+class InternalAccessMixin(LoginRequiredMixin):
+    login_url = "login"
+
+
+class DashboardView(InternalAccessMixin, View):
     template_name = "orders/dashboard.html"
 
     def get(self, request):
@@ -105,7 +110,7 @@ class DashboardView(View):
         return render(request, self.template_name, context)
 
 
-class DeliveryListView(View):
+class DeliveryListView(InternalAccessMixin, View):
     template_name = "orders/delivery_list.html"
 
     def get(self, request):
@@ -115,7 +120,7 @@ class DeliveryListView(View):
         return render(request, self.template_name, context)
 
 
-class DeliveryPdfView(View):
+class DeliveryPdfView(InternalAccessMixin, View):
     def get(self, request):
         target_date, _ = parse_date_query(request, default_to_today=True)
         pdf_file = build_delivery_pdf(target_date=target_date)
@@ -123,7 +128,7 @@ class DeliveryPdfView(View):
         return FileResponse(pdf_file, as_attachment=True, filename=filename)
 
 
-class OrderHistoryView(View):
+class OrderHistoryView(InternalAccessMixin, View):
     template_name = "orders/history.html"
 
     def get(self, request):
@@ -133,7 +138,7 @@ class OrderHistoryView(View):
         return render(request, self.template_name, context)
 
 
-class CompanyDirectoryView(View):
+class CompanyDirectoryView(InternalAccessMixin, View):
     template_name = "orders/company_directory.html"
 
     def get(self, request):
@@ -141,7 +146,7 @@ class CompanyDirectoryView(View):
         return render(request, self.template_name, context)
 
 
-class QrDirectoryView(View):
+class QrDirectoryView(InternalAccessMixin, View):
     template_name = "orders/qr_directory.html"
 
     def get(self, request):
@@ -149,7 +154,7 @@ class QrDirectoryView(View):
         return render(request, self.template_name, context)
 
 
-class OperationsHubView(View):
+class OperationsHubView(InternalAccessMixin, View):
     template_name = "orders/operations_hub.html"
 
     def get(self, request):

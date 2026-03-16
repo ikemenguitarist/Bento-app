@@ -1,5 +1,6 @@
 from datetime import date, time, timedelta
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -126,6 +127,11 @@ class DepartmentOrderViewTests(TestCase):
 
 class OrderAdminPagesTests(TestCase):
     def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="operator",
+            password="test-pass-123",
+        )
+        self.client.force_login(self.user)
         self.company = Company.objects.create(name="Beta")
         self.department_a = Department.objects.create(company=self.company, name="General")
         self.department_b = Department.objects.create(company=self.company, name="Tech")
@@ -234,3 +240,44 @@ class OrderAdminPagesTests(TestCase):
         response = self.client.get("/")
 
         self.assertRedirects(response, reverse("orders:operations-hub"))
+
+
+class InternalPagesAuthTests(TestCase):
+    def test_operations_hub_requires_login(self):
+        response = self.client.get(reverse("orders:operations-hub"))
+
+        self.assertRedirects(
+            response,
+            f'{reverse("login")}?next={reverse("orders:operations-hub")}',
+        )
+
+    def test_dashboard_requires_login(self):
+        response = self.client.get(reverse("orders:dashboard"))
+
+        self.assertRedirects(
+            response,
+            f'{reverse("login")}?next={reverse("orders:dashboard")}',
+        )
+
+    def test_public_order_page_is_accessible_without_login(self):
+        company = Company.objects.create(name="Public")
+        department = Department.objects.create(company=company, name="Sales")
+        Menu.objects.create(name="幕の内弁当", price=800, display_order=1)
+        OrderDeadlineSetting.objects.create(
+            order_deadline_time=time(23, 59),
+            applies_from=date(2026, 1, 1),
+            is_active=True,
+        )
+
+        response = self.client.get(
+            reverse(
+                "orders:department-order",
+                kwargs={
+                    "company_slug": company.slug,
+                    "department_slug": department.slug,
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "注文フォーム")

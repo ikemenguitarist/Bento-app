@@ -51,6 +51,7 @@
     <p>
         <a href="{% url 'orders:dashboard' %}?date={{ selected_date }}">ダッシュボードへ戻る</a>
         <a href="{% url 'orders:delivery-pdf' %}?date={{ selected_date }}">PDFをダウンロード</a>
+        <a href="{% url 'logout' %}">ログアウト</a>
     </p>
 
     {% for row in deliveries %}

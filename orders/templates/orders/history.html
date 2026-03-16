@@ -62,7 +62,10 @@
         </div>
     </form>
 
-    <p><a href="{% url 'orders:dashboard' %}{% if selected_date %}?date={{ selected_date }}{% endif %}">ダッシュボードへ戻る</a></p>
+    <p>
+        <a href="{% url 'orders:dashboard' %}{% if selected_date %}?date={{ selected_date }}{% endif %}">ダッシュボードへ戻る</a>
+        <a href="{% url 'logout' %}">ログアウト</a>
+    </p>
 
     <table>
         <thead>
