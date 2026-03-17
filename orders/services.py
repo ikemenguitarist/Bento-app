@@ -11,7 +11,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
 from companies.models import Company, Department
 from core.models import OrderDeadlineSetting
@@ -298,24 +298,48 @@ def get_delivery_list_context(target_date=None):
         .order_by("company__name", "department__name", "id")
     )
 
-    deliveries = [
-        {
-            "company_name": order.company.name,
-            "department_name": order.department.name,
-            "items": [
+    company_groups = []
+    company_map = {}
+    grand_total = 0
+
+    for order in orders:
+        items = []
+        delivery_total = 0
+        for item in order.items.all():
+            subtotal = item.menu.price * item.quantity
+            delivery_total += subtotal
+            items.append(
                 {
                     "menu_name": item.menu.name,
+                    "price": item.menu.price,
                     "quantity": item.quantity,
+                    "subtotal": subtotal,
                 }
-                for item in order.items.all()
-            ],
+            )
+
+        delivery_row = {
+            "company_name": order.company.name,
+            "department_name": order.department.name,
+            "items": items,
+            "delivery_total": delivery_total,
         }
-        for order in orders
-    ]
+        grand_total += delivery_total
+
+        if order.company_id not in company_map:
+            company_map[order.company_id] = {
+                "company_name": order.company.name,
+                "deliveries": [],
+                "company_total": 0,
+            }
+            company_groups.append(company_map[order.company_id])
+
+        company_map[order.company_id]["deliveries"].append(delivery_row)
+        company_map[order.company_id]["company_total"] += delivery_total
 
     return {
         "target_date": target_date,
-        "deliveries": deliveries,
+        "company_groups": company_groups,
+        "grand_total": grand_total,
     }
 
 
@@ -427,24 +451,37 @@ def build_delivery_pdf(target_date=None):
         Spacer(1, 16),
     ]
 
-    if context["deliveries"]:
-        for delivery in context["deliveries"]:
-            story.append(
-                Paragraph(
-                    f'{delivery["company_name"]} / {delivery["department_name"]}',
-                    styles["Heading2"],
-                )
-            )
-            for item in delivery["items"]:
-                story.append(
-                    Paragraph(
-                        f'{item["menu_name"]}: {item["quantity"]}食',
-                        styles["Normal"],
+    if context["company_groups"]:
+        for index, company_group in enumerate(context["company_groups"]):
+            if index > 0:
+                story.append(PageBreak())
+            story.append(Paragraph(company_group["company_name"], styles["Title"]))
+            story.append(Spacer(1, 12))
+            for delivery in company_group["deliveries"]:
+                story.append(Paragraph(delivery["department_name"], styles["Heading2"]))
+                for item in delivery["items"]:
+                    story.append(
+                        Paragraph(
+                            (
+                                f'{item["menu_name"]}: '
+                                f'{item["price"]}円 x {item["quantity"]}食 = {item["subtotal"]}円'
+                            ),
+                            styles["Normal"],
+                        )
                     )
+                story.append(
+                    Paragraph(f'部署合計: {delivery["delivery_total"]}円', styles["Normal"])
                 )
+                story.append(Spacer(1, 10))
+            story.append(
+                Paragraph(f'企業合計: {company_group["company_total"]}円', styles["Normal"])
+            )
             story.append(Spacer(1, 10))
     else:
         story.append(Paragraph("対象日の注文はありません。", styles["Normal"]))
+
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(f'全体合計: {context["grand_total"]}円', styles["Normal"]))
 
     document.build(story)
     buffer.seek(0)

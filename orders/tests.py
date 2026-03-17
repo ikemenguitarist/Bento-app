@@ -8,6 +8,7 @@ from companies.models import Company, Department
 from core.models import OrderDeadlineSetting
 from menus.models import Menu
 from orders.models import Order, OrderItem, OrderStatus
+from orders.services import get_delivery_list_context
 
 
 class DepartmentOrderViewTests(TestCase):
@@ -133,8 +134,13 @@ class OrderAdminPagesTests(TestCase):
         )
         self.client.force_login(self.user)
         self.company = Company.objects.create(name="Beta")
+        self.company_two = Company.objects.create(name="Gamma")
         self.department_a = Department.objects.create(company=self.company, name="General")
         self.department_b = Department.objects.create(company=self.company, name="Tech")
+        self.department_c = Department.objects.create(
+            company=self.company_two,
+            name="Support",
+        )
         self.menu_a = Menu.objects.create(name="鮭弁当", price=850, display_order=1)
         self.menu_b = Menu.objects.create(name="生姜焼き弁当", price=900, display_order=2)
         OrderDeadlineSetting.objects.create(
@@ -163,6 +169,14 @@ class OrderAdminPagesTests(TestCase):
         )
         OrderItem.objects.create(order=order_yesterday, menu=self.menu_b, quantity=4)
 
+        order_other_company = Order.objects.create(
+            company=self.company_two,
+            department=self.department_c,
+            order_date=today,
+            status=OrderStatus.SUBMITTED,
+        )
+        OrderItem.objects.create(order=order_other_company, menu=self.menu_b, quantity=2)
+
     def test_dashboard_page(self):
         response = self.client.get(reverse("orders:dashboard"))
 
@@ -187,6 +201,31 @@ class OrderAdminPagesTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "配送リスト")
         self.assertContains(response, "鮭弁当")
+        self.assertContains(response, "850円")
+        self.assertContains(response, "1700円")
+        self.assertContains(response, "Beta")
+        self.assertContains(response, "Gamma")
+        self.assertContains(response, "企業合計: 2600円")
+        self.assertContains(response, "企業合計: 1800円")
+        self.assertContains(response, "全体合計: 4400円")
+
+    def test_delivery_context_includes_prices_and_totals(self):
+        context = get_delivery_list_context(target_date=date.today())
+
+        self.assertEqual(context["grand_total"], 4400)
+        self.assertEqual(len(context["company_groups"]), 2)
+        self.assertEqual(context["company_groups"][0]["company_name"], "Beta")
+        self.assertEqual(context["company_groups"][0]["company_total"], 2600)
+        self.assertEqual(context["company_groups"][1]["company_name"], "Gamma")
+        self.assertEqual(context["company_groups"][1]["company_total"], 1800)
+        self.assertEqual(
+            context["company_groups"][0]["deliveries"][0]["items"][0]["price"],
+            850,
+        )
+        self.assertEqual(
+            context["company_groups"][0]["deliveries"][0]["items"][0]["subtotal"],
+            1700,
+        )
 
     def test_delivery_pdf_page(self):
         response = self.client.get(reverse("orders:delivery-pdf"))

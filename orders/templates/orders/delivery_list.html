@@ -26,6 +26,45 @@
             margin-bottom: 16px;
             background: #fff;
         }
+        .company-box {
+            border: 2px solid #cfcfcf;
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 24px;
+            background: #fcfcfc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        th, td {
+            border: 1px solid #e5e5e5;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        th {
+            background: #f7f7f7;
+        }
+        .summary {
+            border: 1px solid #dadada;
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
+            background: #fff;
+        }
+        .total {
+            margin-top: 12px;
+            font-weight: bold;
+        }
+        @media print {
+            .company-box {
+                page-break-after: always;
+            }
+            .company-box:last-child {
+                page-break-after: auto;
+            }
+        }
         a {
             color: #1d4ed8;
         }
@@ -54,14 +93,40 @@
         <a href="{% url 'logout' %}">ログアウト</a>
     </p>
 
-    {% for row in deliveries %}
-    <div class="delivery-box">
-        <h2>{{ row.company_name }} / {{ row.department_name }}</h2>
-        <ul>
-            {% for item in row.items %}
-            <li>{{ item.menu_name }}: {{ item.quantity }}食</li>
-            {% endfor %}
-        </ul>
+    <div class="summary">
+        <strong>全体合計: {{ grand_total }}円</strong>
+    </div>
+
+    {% for company in company_groups %}
+    <div class="company-box">
+        <h2>{{ company.company_name }}</h2>
+        {% for row in company.deliveries %}
+        <div class="delivery-box">
+            <h3>{{ row.department_name }}</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>メニュー</th>
+                        <th>単価</th>
+                        <th>数量</th>
+                        <th>小計</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in row.items %}
+                    <tr>
+                        <td>{{ item.menu_name }}</td>
+                        <td>{{ item.price }}円</td>
+                        <td>{{ item.quantity }}食</td>
+                        <td>{{ item.subtotal }}円</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="total">部署合計: {{ row.delivery_total }}円</div>
+        </div>
+        {% endfor %}
+        <div class="total">企業合計: {{ company.company_total }}円</div>
     </div>
     {% empty %}
     <p>まだ注文はありません。</p>
