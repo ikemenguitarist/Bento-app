@@ -27,7 +27,7 @@
     <div class="card">
         <h1>注文を受け付けました</h1>
         <p>{{ company.name }} / {{ department.name }} の注文を保存しました。</p>
-        <p><a href="{% url 'orders:department-order' company.slug department.slug %}">注文画面に戻る</a></p>
+        <p><a href="{% url 'orders:department-order' company.public_code department.public_code %}">注文画面に戻る</a></p>
     </div>
 </body>
 </html>

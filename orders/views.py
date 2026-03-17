@@ -45,13 +45,13 @@ def parse_date_query(request, *, default_to_today):
 class DepartmentOrderView(View):
     template_name = "orders/order_form.html"
 
-    def get(self, request, company_slug, department_slug):
-        context = get_order_form_context(company_slug, department_slug)
+    def get(self, request, company_code, department_code):
+        context = get_order_form_context(company_code, department_code)
         return render(request, self.template_name, context)
 
-    def post(self, request, company_slug, department_slug):
-        context = get_order_form_context(company_slug, department_slug)
-        department = get_department_or_404(company_slug, department_slug)
+    def post(self, request, company_code, department_code):
+        context = get_order_form_context(company_code, department_code)
+        department = get_department_or_404(company_code, department_code)
         menus = [row["menu"] for row in context["menu_rows"]]
         quantities, errors = parse_quantities(request.POST, menus)
 
@@ -79,16 +79,16 @@ class DepartmentOrderView(View):
 
         return redirect(
             "orders:thanks",
-            company_slug=company_slug,
-            department_slug=department_slug,
+            company_code=company_code,
+            department_code=department_code,
         )
 
 
 class OrderThanksView(View):
     template_name = "orders/thanks.html"
 
-    def get(self, request, company_slug, department_slug):
-        department = get_department_or_404(company_slug, department_slug)
+    def get(self, request, company_code, department_code):
+        department = get_department_or_404(company_code, department_code)
         context = {
             "company": department.company,
             "department": department,

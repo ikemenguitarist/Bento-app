@@ -73,11 +73,11 @@ def get_deadline_status(target_date=None):
     }
 
 
-def get_department_or_404(company_slug, department_slug):
+def get_department_or_404(company_code, department_code):
     try:
         return Department.objects.select_related("company").get(
-            company__slug=company_slug,
-            slug=department_slug,
+            company__public_code=company_code,
+            public_code=department_code,
             company__is_active=True,
             is_active=True,
         )
@@ -85,8 +85,8 @@ def get_department_or_404(company_slug, department_slug):
         raise Http404("指定された企業または部署が見つかりません。") from exc
 
 
-def get_order_form_context(company_slug, department_slug):
-    department = get_department_or_404(company_slug, department_slug)
+def get_order_form_context(company_code, department_code):
+    department = get_department_or_404(company_code, department_code)
     today = timezone.localdate()
     yesterday = today - timedelta(days=1)
 
@@ -401,11 +401,11 @@ def get_company_directory_context(base_order_url):
     for company in companies:
         departments = []
         for department in company.departments.all():
-            order_url = f"{base_order_url}{company.slug}/{department.slug}/"
+            order_url = f"{base_order_url}{company.public_code}/{department.public_code}/"
             departments.append(
                 {
                     "name": department.name,
-                    "slug": department.slug,
+                    "public_code": department.public_code,
                     "order_url": order_url,
                 }
             )
@@ -413,7 +413,7 @@ def get_company_directory_context(base_order_url):
         company_rows.append(
             {
                 "name": company.name,
-                "slug": company.slug,
+                "public_code": company.public_code,
                 "departments": departments,
             }
         )

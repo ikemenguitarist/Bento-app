@@ -26,16 +26,31 @@ class DepartmentOrderViewTests(TestCase):
             is_active=True,
         )
 
-    def test_get_order_page(self):
-        response = self.client.get(
-            reverse(
-                "orders:department-order",
-                kwargs={
-                    "company_slug": self.company.slug,
-                    "department_slug": self.department.slug,
-                },
-            )
+    def order_url(self):
+        return reverse(
+            "orders:department-order",
+            kwargs={
+                "company_code": self.company.public_code,
+                "department_code": self.department.public_code,
+            },
         )
+
+    def thanks_url(self):
+        return reverse(
+            "orders:thanks",
+            kwargs={
+                "company_code": self.company.public_code,
+                "department_code": self.department.public_code,
+            },
+        )
+
+    def test_public_codes_are_generated(self):
+        self.assertEqual(len(self.company.public_code), 10)
+        self.assertEqual(len(self.department.public_code), 10)
+        self.assertNotEqual(self.company.public_code, self.department.public_code)
+
+    def test_get_order_page(self):
+        response = self.client.get(self.order_url())
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "注文フォーム")
@@ -43,29 +58,14 @@ class DepartmentOrderViewTests(TestCase):
 
     def test_submit_order_creates_order_and_items(self):
         response = self.client.post(
-            reverse(
-                "orders:department-order",
-                kwargs={
-                    "company_slug": self.company.slug,
-                    "department_slug": self.department.slug,
-                },
-            ),
+            self.order_url(),
             data={
                 f"menu_{self.menu_a.id}": "2",
                 f"menu_{self.menu_b.id}": "1",
             },
         )
 
-        self.assertRedirects(
-            response,
-            reverse(
-                "orders:thanks",
-                kwargs={
-                    "company_slug": self.company.slug,
-                    "department_slug": self.department.slug,
-                },
-            ),
-        )
+        self.assertRedirects(response, self.thanks_url())
         order = Order.objects.get(department=self.department)
         self.assertEqual(order.company, self.company)
         self.assertEqual(order.status, OrderStatus.SUBMITTED)
@@ -84,13 +84,7 @@ class DepartmentOrderViewTests(TestCase):
         OrderItem.objects.create(order=order, menu=self.menu_a, quantity=5)
 
         self.client.post(
-            reverse(
-                "orders:department-order",
-                kwargs={
-                    "company_slug": self.company.slug,
-                    "department_slug": self.department.slug,
-                },
-            ),
+            self.order_url(),
             data={
                 f"menu_{self.menu_a.id}": "0",
                 f"menu_{self.menu_b.id}": "3",
@@ -112,13 +106,7 @@ class DepartmentOrderViewTests(TestCase):
         )
 
         response = self.client.post(
-            reverse(
-                "orders:department-order",
-                kwargs={
-                    "company_slug": self.company.slug,
-                    "department_slug": self.department.slug,
-                },
-            ),
+            self.order_url(),
             data={f"menu_{self.menu_a.id}": "1"},
         )
 
@@ -257,7 +245,7 @@ class OrderAdminPagesTests(TestCase):
         self.assertContains(response, "General")
         self.assertContains(
             response,
-            f"/orders/{self.company.slug}/{self.department_a.slug}/",
+            f"/orders/{self.company.public_code}/{self.department_a.public_code}/",
         )
 
     def test_qr_directory_page(self):
@@ -312,8 +300,8 @@ class InternalPagesAuthTests(TestCase):
             reverse(
                 "orders:department-order",
                 kwargs={
-                    "company_slug": company.slug,
-                    "department_slug": department.slug,
+                    "company_code": company.public_code,
+                    "department_code": department.public_code,
                 },
             )
         )

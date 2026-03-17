@@ -23,12 +23,12 @@ urlpatterns = [
     path("companies/", CompanyDirectoryView.as_view(), name="company-directory"),
     path("qr/", QrDirectoryView.as_view(), name="qr-directory"),
     path(
-        "<slug:company_slug>/<slug:department_slug>/",
+        "<str:company_code>/<str:department_code>/",
         DepartmentOrderView.as_view(),
         name="department-order",
     ),
     path(
-        "<slug:company_slug>/<slug:department_slug>/thanks/",
+        "<str:company_code>/<str:department_code>/thanks/",
         OrderThanksView.as_view(),
         name="thanks",
     ),
