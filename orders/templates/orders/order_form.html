@@ -78,7 +78,7 @@
 <body>
     <h1>注文フォーム</h1>
     <div class="panel">
-        <p><strong>企業:</strong> {{ company.name }}</p>
+        <p><strong>会社:</strong> {{ company.name }}</p>
         <p><strong>部署:</strong> {{ department.name }}</p>
         <p><strong>対象日:</strong> {{ today }}</p>
         {% if source_label %}
@@ -129,6 +129,9 @@
         {% endfor %}
 
         <button type="submit" {% if deadline.passed or not menu_rows %}disabled{% endif %}>注文を送信する</button>
+        {% if deadline.passed %}
+        <p>注文受付対象日ではないか、締切を過ぎています。</p>
+        {% endif %}
     </form>
 </body>
 </html>

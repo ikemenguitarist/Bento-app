@@ -70,6 +70,13 @@
         .muted {
             color: #666;
         }
+        .messages {
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: #fff8e1;
+            border: 1px solid #f0c36d;
+        }
         input[type="date"], button {
             padding: 8px 10px;
         }
@@ -79,10 +86,18 @@
     <h1>当日ダッシュボード</h1>
     <p class="muted">{{ target_date }}</p>
 
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div>{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <form method="get" class="toolbar">
         <div>
             <label for="date">対象日</label><br>
-            <input id="date" type="date" name="date" value="{{ selected_date }}">
+            <input id="date" type="date" name="date" value="{{ selected_date }}" max="{{ current_date }}">
         </div>
         <div>
             <button type="submit">表示を切り替える</button>
@@ -103,7 +118,7 @@
             <p>{{ ordered_count }} / {{ all_count }}</p>
         </div>
         <div class="card">
-            <h2>企業数</h2>
+            <h2>会社数</h2>
             <p>{{ company_totals|length }}</p>
         </div>
         <div class="card">
@@ -118,14 +133,14 @@
             <a href="{% url 'orders:delivery-list' %}?date={{ selected_date }}">配送リスト</a>
             <a href="{% url 'orders:delivery-pdf' %}?date={{ selected_date }}">配送リストPDF</a>
             <a href="{% url 'orders:history' %}?date={{ selected_date }}">注文履歴</a>
-            <a href="{% url 'orders:company-directory' %}">企業・部署一覧</a>
+            <a href="{% url 'orders:company-directory' %}">会社・部署一覧</a>
             <a href="{% url 'logout' %}">ログアウト</a>
         </p>
     </div>
 
     <div class="section">
         <div class="panel">
-            <h2>企業別集計</h2>
+            <h2>会社別集計</h2>
             {% if company_totals %}
             <ul>
                 {% for row in company_totals %}

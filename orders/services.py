@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 from io import BytesIO
 
 import qrcode
@@ -14,7 +14,7 @@ from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
 from companies.models import Company, Department
-from core.models import OrderDeadlineSetting
+from core.models import OrderDeadlineSetting, ShopHoliday
 from menus.models import Menu
 from orders.models import Order, OrderItem, OrderStatus
 
@@ -36,9 +36,36 @@ def get_order_deadline(target_date=None):
     return setting.order_deadline_time if setting else DEFAULT_ORDER_DEADLINE
 
 
+def get_shop_holiday(target_date):
+    return (
+        ShopHoliday.objects.filter(
+            holiday_date=target_date,
+            is_active=True,
+        )
+        .order_by("holiday_date", "id")
+        .first()
+    )
+
+
 def get_deadline_status(target_date=None):
     if target_date is None:
         target_date = timezone.localdate()
+
+    if target_date.weekday() >= 5:
+        return {
+            "passed": True,
+            "deadline_time": None,
+            "text": "土日は注文を受け付けていません。",
+        }
+
+    holiday = get_shop_holiday(target_date)
+    if holiday:
+        holiday_name = f"（{holiday.name}）" if holiday.name else ""
+        return {
+            "passed": True,
+            "deadline_time": None,
+            "text": f"{target_date}{holiday_name} は休業日のため注文を受け付けていません。",
+        }
 
     current_dt = timezone.localtime()
     deadline = get_order_deadline(target_date)
@@ -51,7 +78,7 @@ def get_deadline_status(target_date=None):
         return {
             "passed": True,
             "deadline_time": deadline,
-            "text": f"注文締切 {deadline.strftime('%H:%M')} は過ぎています。",
+            "text": f"注文締切 {deadline.strftime('%H:%M')} を過ぎています。",
         }
 
     remaining = deadline_dt - current_dt
@@ -64,7 +91,10 @@ def get_deadline_status(target_date=None):
             f" あと {hours}時間{remain_minutes}分です。"
         )
     else:
-        text = f"注文締切は {deadline.strftime('%H:%M')} です。あと {remain_minutes}分です。"
+        text = (
+            f"注文締切は {deadline.strftime('%H:%M')} です。"
+            f" あと {remain_minutes}分です。"
+        )
 
     return {
         "passed": False,
@@ -82,13 +112,31 @@ def get_department_or_404(company_code, department_code):
             is_active=True,
         )
     except Department.DoesNotExist as exc:
-        raise Http404("指定された企業または部署が見つかりません。") from exc
+        raise Http404("指定された会社または部署が見つかりません。") from exc
+
+
+def get_last_order_before(department, target_date):
+    return (
+        Order.objects.filter(
+            department=department,
+            order_date__lt=target_date,
+        )
+        .prefetch_related(
+            Prefetch(
+                "items",
+                queryset=OrderItem.objects.select_related("menu").order_by(
+                    "menu__display_order", "menu__id"
+                ),
+            )
+        )
+        .order_by("-order_date", "-id")
+        .first()
+    )
 
 
 def get_order_form_context(company_code, department_code):
     department = get_department_or_404(company_code, department_code)
     today = timezone.localdate()
-    yesterday = today - timedelta(days=1)
 
     menus = list(Menu.objects.filter(is_active=True).order_by("display_order", "id"))
     today_order = (
@@ -106,14 +154,7 @@ def get_order_form_context(company_code, department_code):
         )
         .first()
     )
-    yesterday_order = (
-        Order.objects.filter(
-            department=department,
-            order_date=yesterday,
-        )
-        .prefetch_related("items__menu")
-        .first()
-    )
+    previous_order = get_last_order_before(department, today)
 
     quantities = {}
     source_label = None
@@ -121,11 +162,11 @@ def get_order_form_context(company_code, department_code):
     if today_order:
         quantities = {item.menu_id: item.quantity for item in today_order.items.all()}
         source_label = "本日保存済みの注文"
-    elif yesterday_order:
+    elif previous_order:
         quantities = {
-            item.menu_id: item.quantity for item in yesterday_order.items.all()
+            item.menu_id: item.quantity for item in previous_order.items.all()
         }
-        source_label = "前日の注文"
+        source_label = f"前回の注文（{previous_order.order_date}）"
 
     menu_rows = [
         {
@@ -464,24 +505,31 @@ def build_delivery_pdf(target_date=None):
                         Paragraph(
                             (
                                 f'{item["menu_name"]}: '
-                                f'{item["price"]}円 x {item["quantity"]}食 = {item["subtotal"]}円'
+                                f'{item["price"]}円 x {item["quantity"]}個 = '
+                                f'{item["subtotal"]}円'
                             ),
                             styles["Normal"],
                         )
                     )
                 story.append(
-                    Paragraph(f'部署合計: {delivery["delivery_total"]}円', styles["Normal"])
+                    Paragraph(
+                        f'部署合計 {delivery["delivery_total"]}円',
+                        styles["Normal"],
+                    )
                 )
                 story.append(Spacer(1, 10))
             story.append(
-                Paragraph(f'企業合計: {company_group["company_total"]}円', styles["Normal"])
+                Paragraph(
+                    f'企業合計 {company_group["company_total"]}円',
+                    styles["Normal"],
+                )
             )
             story.append(Spacer(1, 10))
     else:
         story.append(Paragraph("対象日の注文はありません。", styles["Normal"]))
 
     story.append(Spacer(1, 12))
-    story.append(Paragraph(f'全体合計: {context["grand_total"]}円', styles["Normal"]))
+    story.append(Paragraph(f'全体合計 {context["grand_total"]}円', styles["Normal"]))
 
     document.build(story)
     buffer.seek(0)

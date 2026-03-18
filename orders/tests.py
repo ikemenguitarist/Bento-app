@@ -1,11 +1,12 @@
 from datetime import date, time, timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from companies.models import Company, Department
-from core.models import OrderDeadlineSetting
+from core.models import OrderDeadlineSetting, ShopHoliday
 from menus.models import Menu
 from orders.models import Order, OrderItem, OrderStatus
 from orders.services import get_delivery_list_context
@@ -113,6 +114,49 @@ class DepartmentOrderViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Order.objects.exists())
 
+    @patch("orders.services.timezone.localdate", return_value=date(2026, 3, 14))
+    def test_weekend_order_page_is_blocked(self, _mock_localdate):
+        response = self.client.get(self.order_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "土日")
+        self.assertContains(response, "注文受付対象日ではないか、締切を過ぎています。")
+
+    def test_shop_holiday_blocks_order(self):
+        ShopHoliday.objects.create(
+            holiday_date=date.today(),
+            name="臨時休業",
+            is_active=True,
+        )
+
+        response = self.client.get(self.order_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "休業日")
+
+        post_response = self.client.post(
+            self.order_url(),
+            data={f"menu_{self.menu_a.id}": "1"},
+        )
+
+        self.assertEqual(post_response.status_code, 400)
+        self.assertFalse(Order.objects.exists())
+
+    @patch("orders.services.timezone.localdate", return_value=date(2026, 3, 17))
+    def test_order_form_uses_previous_order_as_initial_values(self, _mock_localdate):
+        older_order = Order.objects.create(
+            company=self.company,
+            department=self.department,
+            order_date=date(2026, 3, 13),
+            status=OrderStatus.SUBMITTED,
+        )
+        OrderItem.objects.create(order=older_order, menu=self.menu_b, quantity=4)
+
+        response = self.client.get(self.order_url())
+
+        self.assertContains(response, "前回の注文（2026-03-13）")
+        self.assertContains(response, 'value="4"')
+
 
 class OrderAdminPagesTests(TestCase):
     def setUp(self):
@@ -183,6 +227,15 @@ class OrderAdminPagesTests(TestCase):
         self.assertContains(response, "生姜焼き弁当")
         self.assertNotContains(response, "鮭弁当")
 
+    def test_dashboard_future_date_falls_back_to_today(self):
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        response = self.client.get(reverse("orders:dashboard"), {"date": tomorrow})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "未来の日付は選択できません。")
+        self.assertContains(response, "General")
+        self.assertContains(response, f'value="{date.today().isoformat()}"')
+
     def test_delivery_list_page(self):
         response = self.client.get(reverse("orders:delivery-list"))
 
@@ -193,9 +246,9 @@ class OrderAdminPagesTests(TestCase):
         self.assertContains(response, "1700円")
         self.assertContains(response, "Beta")
         self.assertContains(response, "Gamma")
-        self.assertContains(response, "企業合計: 2600円")
-        self.assertContains(response, "企業合計: 1800円")
-        self.assertContains(response, "全体合計: 4400円")
+        self.assertContains(response, "企業合計 2600円")
+        self.assertContains(response, "企業合計 1800円")
+        self.assertContains(response, "全体合計 4400円")
 
     def test_delivery_context_includes_prices_and_totals(self):
         context = get_delivery_list_context(target_date=date.today())
@@ -236,11 +289,20 @@ class OrderAdminPagesTests(TestCase):
         self.assertContains(response, "Tech")
         self.assertNotContains(response, "General</td>")
 
+    def test_history_future_date_falls_back_to_today(self):
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        response = self.client.get(reverse("orders:history"), {"date": tomorrow})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "未来の日付は選択できません。")
+        self.assertContains(response, "General")
+        self.assertContains(response, f'value="{date.today().isoformat()}"')
+
     def test_company_directory_page(self):
         response = self.client.get(reverse("orders:company-directory"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "企業・部署一覧")
+        self.assertContains(response, "会社・部署一覧")
         self.assertContains(response, "Beta")
         self.assertContains(response, "General")
         self.assertContains(
@@ -260,8 +322,9 @@ class OrderAdminPagesTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "運営ハブ")
-        self.assertContains(response, "企業管理")
+        self.assertContains(response, "会社管理")
         self.assertContains(response, "配送リストPDF")
+        self.assertContains(response, "休業日設定")
 
     def test_root_path_redirects_to_operations_hub(self):
         response = self.client.get("/")

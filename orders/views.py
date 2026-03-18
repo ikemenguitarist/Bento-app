@@ -12,10 +12,10 @@ from orders.services import (
     build_delivery_pdf,
     get_company_directory_context,
     get_dashboard_context,
-    get_department_or_404,
     get_delivery_list_context,
-    get_order_history_context,
+    get_department_or_404,
     get_order_form_context,
+    get_order_history_context,
     get_qr_directory_context,
     parse_quantities,
     submit_order,
@@ -23,10 +23,10 @@ from orders.services import (
 
 
 def parse_date_query(request, *, default_to_today):
+    today = timezone.localdate()
     raw_value = request.GET.get("date", "").strip()
     if not raw_value:
         if default_to_today:
-            today = timezone.localdate()
             return today, today.isoformat()
         return None, ""
 
@@ -35,9 +35,12 @@ def parse_date_query(request, *, default_to_today):
     except ValueError:
         messages.error(request, "日付は YYYY-MM-DD 形式で指定してください。")
         if default_to_today:
-            today = timezone.localdate()
             return today, today.isoformat()
         return None, ""
+
+    if parsed > today:
+        messages.error(request, "未来の日付は選択できません。")
+        return today, today.isoformat()
 
     return parsed, raw_value
 
@@ -107,6 +110,7 @@ class DashboardView(InternalAccessMixin, View):
         target_date, selected_date = parse_date_query(request, default_to_today=True)
         context = get_dashboard_context(target_date=target_date)
         context["selected_date"] = selected_date
+        context["current_date"] = timezone.localdate().isoformat()
         return render(request, self.template_name, context)
 
 
@@ -117,6 +121,7 @@ class DeliveryListView(InternalAccessMixin, View):
         target_date, selected_date = parse_date_query(request, default_to_today=True)
         context = get_delivery_list_context(target_date=target_date)
         context["selected_date"] = selected_date
+        context["current_date"] = timezone.localdate().isoformat()
         return render(request, self.template_name, context)
 
 
@@ -135,6 +140,7 @@ class OrderHistoryView(InternalAccessMixin, View):
         target_date, selected_date = parse_date_query(request, default_to_today=False)
         context = get_order_history_context(target_date=target_date)
         context["selected_date"] = selected_date
+        context["current_date"] = timezone.localdate().isoformat()
         return render(request, self.template_name, context)
 
 
@@ -162,8 +168,8 @@ class OperationsHubView(InternalAccessMixin, View):
         context = {
             "sections": [
                 {
-                    "title": "日次運用",
-                    "description": "当日の注文確認、配送準備、履歴確認を行います。",
+                    "title": "日次確認",
+                    "description": "当日の注文状況、配送準備、履歴確認を行います。",
                     "links": [
                         {
                             "label": "当日ダッシュボード",
@@ -185,10 +191,10 @@ class OperationsHubView(InternalAccessMixin, View):
                 },
                 {
                     "title": "配布と案内",
-                    "description": "企業・部署ごとの注文URLやQRコードを配布します。",
+                    "description": "会社・部署ごとの注文URLとQRコードを確認します。",
                     "links": [
                         {
-                            "label": "企業・部署一覧",
+                            "label": "会社・部署一覧",
                             "url": reverse("orders:company-directory"),
                         },
                         {
@@ -199,10 +205,10 @@ class OperationsHubView(InternalAccessMixin, View):
                 },
                 {
                     "title": "マスタ管理",
-                    "description": "企業、部署、メニュー、締切設定を Django admin で更新します。",
+                    "description": "会社、部署、メニュー、締切設定を Django admin で更新します。",
                     "links": [
                         {
-                            "label": "企業管理",
+                            "label": "会社管理",
                             "url": reverse("admin:companies_company_changelist"),
                         },
                         {
@@ -216,6 +222,10 @@ class OperationsHubView(InternalAccessMixin, View):
                         {
                             "label": "締切設定",
                             "url": reverse("admin:core_orderdeadlinesetting_changelist"),
+                        },
+                        {
+                            "label": "休業日設定",
+                            "url": reverse("admin:core_shopholiday_changelist"),
                         },
                     ],
                 },

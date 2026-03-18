@@ -47,7 +47,7 @@
     <h1>QR 一覧</h1>
     <p>
         <a href="{% url 'orders:dashboard' %}">ダッシュボード</a>
-        <a href="{% url 'orders:company-directory' %}">企業・部署一覧</a>
+        <a href="{% url 'orders:company-directory' %}">会社・部署一覧</a>
         <a href="{% url 'logout' %}">ログアウト</a>
     </p>
 
@@ -67,7 +67,7 @@
         </div>
     </div>
     {% empty %}
-    <p>有効な企業がありません。</p>
+    <p>有効な会社がありません。</p>
     {% endfor %}
 </body>
 </html>

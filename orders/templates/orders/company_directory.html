@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>企業・部署一覧</title>
+    <title>会社・部署一覧</title>
     <style>
         body {
             font-family: sans-serif;
@@ -35,7 +35,7 @@
     </style>
 </head>
 <body>
-    <h1>企業・部署一覧</h1>
+    <h1>会社・部署一覧</h1>
     <p>
         <a href="{% url 'orders:dashboard' %}">ダッシュボード</a>
         <a href="{% url 'orders:qr-directory' %}">QR 一覧</a>
@@ -55,7 +55,7 @@
         {% endfor %}
     </div>
     {% empty %}
-    <p>有効な企業がありません。</p>
+    <p>有効な会社がありません。</p>
     {% endfor %}
 </body>
 </html>
